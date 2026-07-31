@@ -41,7 +41,7 @@ Cocok buat yang sering kerja sambil dengerin musik dan pengen ngerti liriknya ta
 
 ### Opsi A — Langsung Pakai (Tanpa Python)
 
-> 📥 **Download tersedia di tab [Releases](../../releases) repositori ini.**
+> 📥 **Download tersedia di tab [Releases](https://github.com/majeri03/spotify-overlay-lyrics/releases/download/v1.0.0/EchoLyrics.exe) repositori ini.**
 
 1. Buka tab **Releases** di halaman GitHub ini (sisi kanan atas)
 2. Download file `EchoLyrics.exe` dari versi terbaru
