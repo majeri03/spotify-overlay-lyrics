@@ -41,9 +41,12 @@ Cocok buat yang sering kerja sambil dengerin musik dan pengen ngerti liriknya ta
 
 ### Opsi A — Langsung Pakai (Tanpa Python)
 
-1. Download file `EchoLyrics.exe` dari bagian **Releases** di GitHub ini
-2. Klik dua kali untuk jalankan — tidak perlu install apapun
-3. Ikon tray akan muncul di pojok kanan bawah taskbar
+> 📥 **Download tersedia di tab [Releases](../../releases) repositori ini.**
+
+1. Buka tab **Releases** di halaman GitHub ini (sisi kanan atas)
+2. Download file `EchoLyrics.exe` dari versi terbaru
+3. Klik dua kali untuk jalankan — tidak perlu install Python atau apapun
+4. Ikon tray akan muncul di pojok kanan bawah taskbar Windows kamu
 
 ### Opsi B — Jalankan dari Source Code
 
@@ -88,18 +91,6 @@ Putar lagu di Spotify → lirik langsung muncul otomatis di layar kamu. 🎶
 
 ---
 
-## Shortcut Keyboard
-
-| Tombol | Fungsi |
-|--------|--------|
-| `Ctrl+Shift+O` | Tampilkan / sembunyikan overlay |
-| `Ctrl+Shift+L` | Buka jendela lirik lengkap |
-| `Ctrl+Shift+T` | Aktifkan / nonaktifkan click-through |
-| `Ctrl+Shift+G` | Aktifkan / nonaktifkan efek glow |
-| `Ctrl+Shift+S` | Buka Settings |
-| `Ctrl+Shift+Q` | Keluar dari aplikasi |
-
----
 
 ## Cara Build Sendiri (Untuk Developer)
 
@@ -158,14 +149,14 @@ echolyrics/
 ![alt text](image.png)
 ![alt text](image-1.png)
 ![alt text](image-2.png)
-## Lisensi
 
+## Lisensi
 MIT License — bebas dipakai, dimodifikasi, dan didistribusikan.
- "Aplikasi ini tidak menyimpan atau mendistribusikan lirik. Lirik ditampilkan sementara dari sumber pihak ketiga (LRCLIB) dan merupakan milik pemegang hak cipta masing-masing." 
+- "Aplikasi ini tidak menyimpan atau mendistribusikan lirik. Lirik ditampilkan sementara dari sumber pihak ketiga (LRCLIB) dan   merupakan milik pemegang hak cipta masing-masing." 
 ---
 
 <div align="center">
 
-Dibuat dengan ☕ dan terlalu banyak lagu di playlist.
+Dibuat oleh J dan AiAgent.
 
 </div>

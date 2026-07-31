@@ -1,15 +1,3 @@
-"""
-EchoLyrics — Build Script
-===========================
-Script otomatis untuk build Windows executable.
-
-Cara pakai:
-    python build.py
-
-Output:
-    dist/EchoLyrics.exe  — Single file executable (tidak butuh Python)
-"""
-
 import os
 import sys
 import subprocess
