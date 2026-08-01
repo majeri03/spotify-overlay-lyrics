@@ -115,6 +115,15 @@ MIGRATIONS: List[Tuple[str, str, List[str]]] = [
             """,
         ]
     ),
+    (
+        "1.1.0",
+        "Add sync_offset_ms to tracks for auto-sync calibration",
+        [
+            """
+            ALTER TABLE tracks ADD COLUMN sync_offset_ms REAL NOT NULL DEFAULT 0.0;
+            """,
+        ]
+    ),
 ]
 
 

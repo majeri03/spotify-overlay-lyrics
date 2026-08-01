@@ -65,3 +65,16 @@ class LyricsRepository:
             (track_id,)
         )
         return [r["lyrics_id"] for r in rows]
+
+    def delete_by_track_id(self, track_id: int) -> None:
+        """Hapus lyrics & translation untuk track_id."""
+        try:
+            self._db.execute_write(
+                "DELETE FROM translations WHERE lyrics_id IN (SELECT lyrics_id FROM lyrics WHERE track_id = ?)",
+                (track_id,)
+            )
+            self._db.execute_write("DELETE FROM lyrics WHERE track_id = ?", (track_id,))
+            app_logger.debug(f"[LyricsRepo] Deleted lyrics & translations for track_id={track_id}")
+        except Exception as e:
+            app_logger.warning(f"[LyricsRepo] Failed to delete lyrics for track_id={track_id}: {e}")
+

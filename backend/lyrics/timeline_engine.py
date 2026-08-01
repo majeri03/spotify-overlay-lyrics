@@ -89,6 +89,15 @@ class TimelineEngine:
         # Reset current index sehingga next lookup fresh
         self._current_index = -1
 
+    def soft_shift(self, delta_ms: float) -> None:
+        """
+        Geser posisi timer sebesar delta_ms tanpa mereset current_index.
+        Digunakan oleh SmartSyncEngine untuk lerp correction yang halus.
+        Tidak menyebabkan flicker karena binary search tetap dari posisi saat ini.
+        """
+        current = self._timer.position_ms
+        self._timer.seek(max(0.0, current + delta_ms))
+
     def reset(self) -> None:
         self._timer.reset()
         self._current_index = -1

@@ -77,8 +77,8 @@ class OverlayController:
         pass
 
     def _evt_track_changed(self, _) -> None:
-        # Clear subtitle saat lagu ganti (loading state)
-        self._overlay.clear()
+        # Clear subtitle saat lagu ganti via Qt Signal (thread-safe UI update)
+        self._signals.track_ended.emit()
 
     def _evt_translation_ready(self, timeline) -> None:
         if timeline:

@@ -66,7 +66,7 @@ while ($true) {
     } catch {
         Write-Output '{}'
     }
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 250
 }
 """
 
@@ -94,6 +94,7 @@ class WindowsMediaProvider:
         self._last_album: str = ""
         self._last_dur_ms: int = 0
         self._last_raw_pos: int = 0           # posisi mentah dari GSMTC
+        self._last_update_time: float = 0.0    # perf_counter saat data terakhir diterima
 
         self._start()
 
@@ -177,6 +178,7 @@ class WindowsMediaProvider:
             self._last_dur_ms = dur_ms
             self._last_status = status
             self._last_raw_pos = raw_pos
+            self._last_update_time = time.perf_counter()
 
     def fetch_playback(self) -> Optional[PlaybackInfo]:
         """
@@ -184,21 +186,25 @@ class WindowsMediaProvider:
         Posisi dihitung secara real-time dari anchor (bukan PositionMs GSMTC).
         """
         with self._lock:
-            title   = self._last_title
-            artist  = self._last_artist
-            album   = self._last_album
-            dur_ms  = self._last_dur_ms
-            status  = self._last_status
-            anchor_pos  = self._anchor_pos_ms
-            anchor_time = self._anchor_time
+            title        = self._last_title
+            artist       = self._last_artist
+            album        = self._last_album
+            dur_ms       = self._last_dur_ms
+            status       = self._last_status
+            anchor_pos   = self._anchor_pos_ms
+            anchor_time  = self._anchor_time
+            update_time  = self._last_update_time
 
         if not title or status == "Stopped":
             return None
 
-        # Hitung posisi real-time
+        # Hitung posisi real-time dari anchor (menggunakan perf_counter presisi tinggi)
         if status == "Playing" and anchor_time > 0:
             elapsed_ms = (time.perf_counter() - anchor_time) * 1000.0
             pos_ms = int(anchor_pos + elapsed_ms)
+            # Klamp supaya tidak melebihi durasi lagu
+            if dur_ms > 0:
+                pos_ms = min(pos_ms, dur_ms)
         else:
             pos_ms = int(anchor_pos)
 

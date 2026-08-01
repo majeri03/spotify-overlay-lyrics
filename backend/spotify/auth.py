@@ -20,6 +20,8 @@ import requests
 
 from backend.logger.app_logger import app_logger
 
+import secrets
+
 # ──────────────────────────────────────────────────────────────
 SCOPES = " ".join([
     "user-read-playback-state",
@@ -42,10 +44,18 @@ class _CallbackHandler(BaseHTTPRequestHandler):
     """Menerima redirect dari Spotify OAuth."""
     code: Optional[str] = None
     error: Optional[str] = None
+    expected_state: Optional[str] = None
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
+        
+        state_in = params.get("state", [None])[0]
+        if _CallbackHandler.expected_state and state_in != _CallbackHandler.expected_state:
+            _CallbackHandler.error = "State CSRF verification failed."
+            self._respond("❌ CSRF Warning: State parameter mismatch.")
+            return
+
         if "code" in params:
             _CallbackHandler.code = params["code"][0]
             self._respond("✅ Login berhasil! Kamu bisa menutup tab ini.")
@@ -75,19 +85,22 @@ class SpotifyAuth:
     def __init__(self, client_id: str, client_secret: str) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
+        self._state: Optional[str] = None
 
     def _auth_header(self) -> dict:
         creds = f"{self._client_id}:{self._client_secret}"
         encoded = base64.b64encode(creds.encode()).decode()
         return {"Authorization": f"Basic {encoded}"}
 
-    def get_auth_url(self) -> str:
+    def get_auth_url(self, state: Optional[str] = None) -> str:
         params = {
             "client_id": self._client_id,
             "response_type": "code",
             "redirect_uri": REDIRECT_URI,
             "scope": SCOPES,
         }
+        if state:
+            params["state"] = state
         return f"{AUTH_URL}?{urllib.parse.urlencode(params)}"
 
     def login_with_browser(self) -> Optional[Tuple[str, str, int]]:
@@ -95,14 +108,16 @@ class SpotifyAuth:
         Buka browser, tunggu callback, return (access_token, refresh_token, expires_in).
         Return None jika gagal.
         """
+        self._state = secrets.token_urlsafe(16)
         _CallbackHandler.code = None
         _CallbackHandler.error = None
+        _CallbackHandler.expected_state = self._state
 
         server = HTTPServer(("127.0.0.1", 8765), _CallbackHandler)
         server.timeout = 1.0
 
-        auth_url = self.get_auth_url()
-        app_logger.info(f"[Auth] Opening browser: {auth_url}")
+        auth_url = self.get_auth_url(state=self._state)
+        app_logger.info(f"[Auth] Opening browser with CSRF state protection...")
         webbrowser.open(auth_url)
 
         deadline = time.time() + TIMEOUT

@@ -96,6 +96,13 @@ class EchoLyricsApp:
             self._timeline,
             windows_media_provider=self._win_media,   # inject untuk fresh position
         )
+        # Apply initial settings ke SmartSyncEngine
+        auto_sync = bool(self._config.get("auto_sync_enabled", 1))
+        manual_offset = float(self._config.get("manual_sync_offset_ms", 0))
+        self._lyrics_service.set_autosync_enabled(auto_sync)
+        if abs(manual_offset) > 5:
+            self._lyrics_service.set_manual_sync_offset(manual_offset)
+
 
         # 8. Translation
         self._translation_service = TranslationService(
@@ -162,7 +169,7 @@ class EchoLyricsApp:
         t.hide_overlay.connect(self._overlay.hide_overlay)
         t.show_settings.connect(self._show_settings)
         t.show_lyrics.connect(self._show_lyrics)
-        t.refresh.connect(lambda: self._auth_spotify(force=True))
+        t.refresh.connect(self._refresh_session)
         t.clear_cache.connect(self._clear_cache)
         t.restart.connect(self._restart)
         t.quit_app.connect(self._quit)
@@ -180,6 +187,12 @@ class EchoLyricsApp:
                 "Subtitle dikunci dan kembali tembus pandang (click-through)."
             )
 
+    def _refresh_session(self) -> None:
+        if self._spotify:
+            self._auth_spotify(force=True)
+            self._spotify.poll()
+        self._tray.notify("Refreshed ↻", "Sesi media & Spotify telah diperbarui.")
+
     # ──────────────────────────────────────────────────────────
     # Windows
     # ──────────────────────────────────────────────────────────
@@ -196,7 +209,7 @@ class EchoLyricsApp:
         if self._lyrics_win and self._lyrics_win.isVisible():
             self._lyrics_win.raise_()
             return
-        self._lyrics_win = FullLyricsWindow(self._bus)
+        self._lyrics_win = FullLyricsWindow(self._bus, timeline_engine=self._timeline)
         self._lyrics_win.show()
 
     def _on_settings_applied(self, data: dict) -> None:
@@ -204,12 +217,42 @@ class EchoLyricsApp:
         if action == "clear_cache":
             self._clear_cache()
             return
+        if action == "clear_current_cache":
+            if self._lyrics_service:
+                ok = self._lyrics_service.clear_current_track_cache()
+                if ok:
+                    self._tray.notify("Cache Lagu Dihapus 🗑", "Cache lirik & terjemahan lagu ini telah dihapus. Lirik baru sedang dimuat...")
+                else:
+                    self._tray.notify("Informasi ℹ", "Tidak ada lagu yang sedang diputar.")
+            return
+
+        if action == "reset_sync":
+            if self._lyrics_service:
+                self._lyrics_service.reset_current_sync_offset()
+            self._tray.notify("Reset Kalibrasi ↺", "Offset kalibrasi lagu ini telah di-reset.")
+            return
+        if action == "force_resync":
+            if self._lyrics_service:
+                self._lyrics_service.force_resync()
+            self._tray.notify("Re-Sync ↻", "Lirik di-sinkronkan ulang ke posisi audio sekarang.")
+            return
+        if action == "manual_offset":
+            offset_ms = float(data.get("offset_ms", 0))
+            if self._lyrics_service:
+                self._lyrics_service.set_manual_sync_offset(offset_ms)
+            return
+        if action == "autosync_toggle":
+            enabled = bool(data.get("enabled", True))
+            if self._lyrics_service:
+                self._lyrics_service.set_autosync_enabled(enabled)
+            return
         if action == "spotify_login":
-            # Update credentials dan re-auth
+            # Update credentials dan re-auth (menggunakan shared win_media provider agar tidak ganda)
             self._spotify = SpotifyService(
                 self._config.get("spotify_client_id", ""),
                 self._config.get("spotify_client_secret", ""),
-                self._bus
+                self._bus,
+                windows_media_provider=self._win_media,
             )
             self._auth_spotify(force=True)
             return

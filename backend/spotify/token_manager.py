@@ -11,6 +11,7 @@ import base64
 import json
 import os
 import platform
+import threading
 import time
 from typing import Optional
 
@@ -69,6 +70,7 @@ class TokenManager:
         os.makedirs(_CONFIG_DIR, exist_ok=True)
         self._key = _derive_key()
         self._aesgcm = AESGCM(self._key)
+        self._lock = threading.Lock()
         self._token_data: Optional[dict] = None
 
     # ── Encrypt / Decrypt ──────────────────────────────────────
@@ -77,7 +79,6 @@ class TokenManager:
         nonce = os.urandom(12)
         plaintext = json.dumps(data).encode("utf-8")
         ciphertext = self._aesgcm.encrypt(nonce, plaintext, None)
-        # Simpan nonce + ciphertext
         return base64.b64encode(nonce + ciphertext)
 
     def _decrypt(self, blob: bytes) -> Optional[dict]:
@@ -100,26 +101,44 @@ class TokenManager:
             "expires_at": time.time() + expires_in,
         }
         encrypted = self._encrypt(data)
-        with open(_TOKEN_FILE, "wb") as f:
-            f.write(encrypted)
-        self._token_data = data
+        with self._lock:
+            try:
+                with open(_TOKEN_FILE, "wb") as f:
+                    f.write(encrypted)
+            except Exception as e:
+                app_logger.warning(f"[TokenManager] Save error: {e}")
+            self._token_data = data
         app_logger.info("[TokenManager] Token saved (encrypted).")
 
     def load(self) -> Optional[dict]:
-        if self._token_data:
-            return self._token_data
-        if not os.path.exists(_TOKEN_FILE):
-            return None
-        with open(_TOKEN_FILE, "rb") as f:
-            blob = f.read()
-        data = self._decrypt(blob)
-        self._token_data = data
-        return data
+        with self._lock:
+            if self._token_data:
+                return self._token_data
+            if not os.path.exists(_TOKEN_FILE):
+                return None
+            try:
+                with open(_TOKEN_FILE, "rb") as f:
+                    blob = f.read()
+                data = self._decrypt(blob)
+                self._token_data = data
+                return data
+            except Exception as e:
+                app_logger.warning(f"[TokenManager] Load error: {e}")
+                return None
 
     def clear(self) -> None:
-        self._token_data = None
-        if os.path.exists(_TOKEN_FILE):
-            os.remove(_TOKEN_FILE)
+        with self._lock:
+            self._token_data = None
+            if os.path.exists(_TOKEN_FILE):
+                try:
+                    os.remove(_TOKEN_FILE)
+                except Exception as e:
+                    try:
+                        with open(_TOKEN_FILE, "wb") as f:
+                            f.truncate(0)
+                    except Exception:
+                        pass
+                    app_logger.warning(f"[TokenManager] Clear warning: {e}")
 
     # ── Validation ─────────────────────────────────────────────
 

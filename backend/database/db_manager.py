@@ -79,13 +79,14 @@ class DatabaseManager:
         sql: str,
         params: Tuple = ()
     ) -> List[sqlite3.Row]:
-        """Read query — thread-safe tanpa lock."""
-        try:
-            cursor = self._conn.execute(sql, params)
-            return cursor.fetchall()
-        except sqlite3.Error as e:
-            app_logger.error(f"[DB] Read error: {e} | SQL: {sql[:80]}")
-            return []
+        """Read query — thread-safe dengan mutex."""
+        with self._write_lock:
+            try:
+                cursor = self._conn.execute(sql, params)
+                return cursor.fetchall()
+            except sqlite3.Error as e:
+                app_logger.error(f"[DB] Read error: {e} | SQL: {sql[:80]}")
+                return []
 
     def execute_write(
         self,
@@ -131,13 +132,14 @@ class DatabaseManager:
         sql: str,
         params: Tuple = ()
     ) -> Optional[sqlite3.Row]:
-        """Ambil satu baris."""
-        try:
-            cursor = self._conn.execute(sql, params)
-            return cursor.fetchone()
-        except sqlite3.Error as e:
-            app_logger.error(f"[DB] Fetchone error: {e}")
-            return None
+        """Ambil satu baris — thread-safe dengan mutex."""
+        with self._write_lock:
+            try:
+                cursor = self._conn.execute(sql, params)
+                return cursor.fetchone()
+            except sqlite3.Error as e:
+                app_logger.error(f"[DB] Fetchone error: {e}")
+                return None
 
     # ──────────────────────────────────────────────────────────
     # Lifecycle
