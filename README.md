@@ -74,7 +74,7 @@ Kamu perlu menghubungkan akun Spotify-mu. Ini prosesnya:
 1. Buka [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Login dengan akun Spotify kamu
 3. Klik **Create App**
-4. Isi nama apa saja, lalu di kolom **Redirect URI** masukkan: `http://localhost:8765/callback`
+4. Isi nama apa saja, lalu di kolom **Redirect URI** masukkan: `http://127.0.0.1:8765/callback`
 5. Salin **Client ID** dan **Client Secret** yang muncul
 
 **Langkah 2 — Masukkan ke Aplikasi**
