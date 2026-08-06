@@ -87,6 +87,19 @@ class LyricsService:
     def _on_track_changed(self, playback: Optional[PlaybackInfo]) -> None:
         if not playback or not playback.track:
             return
+        track = playback.track
+
+        # Filter iklan Spotify / unknown track — skip loading lirik
+        _SKIP_KEYWORDS = ("advertisement", "spotify", "unknown artist")
+        artist_lower = track.artist.lower()
+        title_lower  = track.title.lower()
+        if any(kw in artist_lower or kw in title_lower for kw in _SKIP_KEYWORDS):
+            app_logger.info(f"[LyricsService] Skipping ad/unknown track: {track.artist} - {track.title}")
+            self._timeline.reset()
+            self._sync.reset()
+            self._bus.publish(EventType.LYRICS_NOT_FOUND, track)
+            return
+
         self._timeline.reset()
         self._sync.reset()
         thread = threading.Thread(
@@ -95,6 +108,7 @@ class LyricsService:
             daemon=True
         )
         thread.start()
+
 
     def _on_paused(self, _) -> None:
         self._timeline.pause()

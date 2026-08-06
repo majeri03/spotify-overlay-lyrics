@@ -50,9 +50,10 @@ class OverlayController:
         self._bus.subscribe(EventType.SPOTIFY_DISCONNECTED, self._evt_disconnected)
         self._bus.subscribe(EventType.SPOTIFY_CONNECTED, self._evt_connected)
         self._bus.subscribe(EventType.TRACK_ENDED, self._evt_track_ended)
-        # LYRICS_NOT_FOUND: jangan sembunyikan overlay, hanya clear subtitle
+        # LYRICS_NOT_FOUND: clear subtitle tapi jangan sembunyikan overlay
         self._bus.subscribe(EventType.LYRICS_NOT_FOUND, self._evt_lyrics_not_found)
-        self._bus.subscribe(EventType.TRACK_CHANGED, self._evt_track_changed)
+        # TRACK_CHANGED: JANGAN clear overlay — biarkan lirik lama tampil sampai lirik baru siap
+        # self._bus.subscribe(EventType.TRACK_CHANGED, self._evt_track_changed)
         self._bus.subscribe(EventType.TRANSLATION_READY, self._evt_translation_ready)
 
     # ──────────────────────────────────────────────────────────
@@ -73,12 +74,14 @@ class OverlayController:
         self._signals.track_ended.emit()
 
     def _evt_lyrics_not_found(self, _) -> None:
-        # Clear teks tapi jangan sembunyikan overlay — lagu mungkin ada berikutnya
-        pass
+        # Tidak ada lirik untuk lagu ini — clear teks subtitle di main thread
+        self._signals.track_ended.emit()
 
     def _evt_track_changed(self, _) -> None:
-        # Clear subtitle saat lagu ganti via Qt Signal (thread-safe UI update)
-        self._signals.track_ended.emit()
+        # SENGAJA tidak clear overlay saat track ganti.
+        # Lirik lama tetap tampil sampai lirik baru siap (QUEUE_UPDATED).
+        # Ini mencegah gap kosong antara ganti lagu.
+        pass
 
     def _evt_translation_ready(self, timeline) -> None:
         if timeline:

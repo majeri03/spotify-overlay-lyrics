@@ -44,6 +44,11 @@ class SpotifyService:
         self._current_playback: Optional[PlaybackInfo] = None
         self._is_connected = False
         self._client_403_count = 0
+        # Token refresh throttle — cegah spam error saat token expired
+        self._refresh_lock = threading.Lock()
+        self._last_refresh_attempt: float = 0.0
+        self._refresh_cooldown: float = 60.0   # detik antar retry
+        self._refresh_failed: bool = False
 
     # ──────────────────────────────────────────────────────────
     # Auth
@@ -84,14 +89,32 @@ class SpotifyService:
         if result:
             access, expires = result
             self._token_mgr.save(access, rt, expires)
+            self._refresh_failed = False
             return True
         return False
 
     def _get_access_token(self) -> str:
-        """Getter untuk SpotifyClient — otomatis refresh jika perlu."""
-        if self._token_mgr.is_expired():
-            if not self._refresh_token():
-                app_logger.error("[SpotifyService] Cannot refresh token.")
+        """Getter untuk SpotifyClient — otomatis refresh jika perlu, dengan throttle."""
+        if not self._token_mgr.is_expired():
+            return self._token_mgr.get_access_token() or ""
+
+        # Throttle: hanya coba refresh sekali per _refresh_cooldown detik
+        now = time.time()
+        with self._refresh_lock:
+            if now - self._last_refresh_attempt < self._refresh_cooldown:
+                # Masih dalam cooldown — kembalikan token lama (mungkin masih bisa dipakai)
+                return self._token_mgr.get_access_token() or ""
+            self._last_refresh_attempt = now
+
+        if self._refresh_token():
+            app_logger.info("[SpotifyService] Token refreshed successfully.")
+            self._refresh_cooldown = 60.0   # reset cooldown
+        else:
+            if not self._refresh_failed:
+                # Log hanya sekali saat pertama kali gagal, bukan setiap poll
+                app_logger.error("[SpotifyService] Cannot refresh token. App still works via Windows Media. Use Settings > Spotify > Login to re-authenticate.")
+            self._refresh_failed = True
+            self._refresh_cooldown = min(self._refresh_cooldown * 2, 300.0)  # exponential backoff, max 5 menit
         return self._token_mgr.get_access_token() or ""
 
     # ──────────────────────────────────────────────────────────
